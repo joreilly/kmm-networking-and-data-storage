@@ -2,15 +2,16 @@ package com.jetbrains.handson.androidApp
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import androidx.compose.foundation.Box
 import androidx.compose.foundation.Text
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumnFor
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.setContent
 import androidx.compose.ui.res.colorResource
@@ -36,16 +37,32 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
+sealed class UiState<out T: Any> {
+    object Loading : UiState<Nothing>()
+    data class Success<out T : Any>(val data: T) : UiState<T>()
+    data class Error(val exception: Exception) : UiState<Nothing>()
+}
+
+
 @Composable
 fun MainLayout(sdk: SpaceXSDK) {
-    var launches by remember { mutableStateOf<List<RocketLaunch>>(emptyList()) }
+    val uiState = remember { mutableStateOf<UiState<List<RocketLaunch>>>(UiState.Loading)}
 
-    launchInComposition() {
-        launches = sdk.getLaunches(false)
+    launchInComposition {
+        uiState.value = UiState.Success(sdk.getLaunches(false))
     }
 
-    LazyColumnFor(items = launches) { launch ->
-        LaunchView(launch)
+    when (val uiStateValue = uiState.value) {
+        is UiState.Loading -> {
+            Box(modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center)) {
+                CircularProgressIndicator()
+            }
+        }
+        is UiState.Success -> {
+            LazyColumnFor(items = uiStateValue.data) { launch ->
+                LaunchView(launch)
+            }
+        }
     }
 }
 
