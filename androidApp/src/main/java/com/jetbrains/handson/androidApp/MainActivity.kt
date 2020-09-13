@@ -49,7 +49,12 @@ fun MainLayout(sdk: SpaceXSDK) {
     val uiState = remember { mutableStateOf<UiState<List<RocketLaunch>>>(UiState.Loading)}
 
     launchInComposition {
-        uiState.value = UiState.Success(sdk.getLaunches(false))
+        try {
+            val launches = sdk.getLaunches(false)
+            uiState.value = UiState.Success(sdk.getLaunches(true))
+        } catch(e: Exception) {
+            uiState.value = UiState.Error(e)
+        }
     }
 
     when (val uiStateValue = uiState.value) {
@@ -62,6 +67,9 @@ fun MainLayout(sdk: SpaceXSDK) {
             LazyColumnFor(items = uiStateValue.data) { launch ->
                 LaunchView(launch)
             }
+        }
+        is UiState.Error -> {
+            Text(uiStateValue.exception.localizedMessage)
         }
     }
 }
